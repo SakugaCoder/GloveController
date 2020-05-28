@@ -18,6 +18,6 @@ void loop()
     {
       int i;
       // Message with a good checksum received, dump it.
-      Serial.println((char*)buf);         
+      Serial.print((char*)buf);         
     }
 }
