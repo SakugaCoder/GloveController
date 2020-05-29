@@ -7,6 +7,7 @@ RH_ASK driver;
 #define MIDDLE_FINGER 3
 #define RING_FINGER 4
 #define BABY_FINGER 5
+#define LED 8
 
 #define ACTIVE LOW
 
@@ -20,6 +21,7 @@ void setup()
     pinMode(MIDDLE_FINGER, INPUT_PULLUP);
     pinMode(RING_FINGER, INPUT_PULLUP);
     pinMode(BABY_FINGER, INPUT_PULLUP);
+    pinMode(LED, OUTPUT);
 }
 
 void loop()
@@ -53,8 +55,10 @@ void loop()
 }
 
 void sendCommand(const char *command){
+  digitalWrite(LED, 1);
   const char *msg = command;
   driver.send((uint8_t *)msg, strlen(msg));
   driver.waitPacketSent();
   delay(1000);
+  digitalWrite(LED, 0);
 }

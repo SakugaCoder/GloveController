@@ -1,6 +1,7 @@
 import serial
 import serial.tools.list_ports
 import tkinter as tk
+from tkinter import messagebox
 import threading
 import pyautogui
 import PIL.Image
@@ -11,6 +12,7 @@ import cv2
 
 main_window = tk.Tk()
 current_option = tk.StringVar(main_window)
+btn_text_var = None
 arduino_thread = None
 window_is_alive = True
 ser = None
@@ -40,14 +42,31 @@ def transform_img(img_array):
 
 
 def get_finger(index):
+    global glove_image, main_window
     if index == 'I':
+        tmp_img = transform_img(cv2.imread("../assets/pics/gc_index.png"))
+        glove_image.configure(image=tmp_img)
+        glove_image.image = tmp_img
+        main_window.update()
         return 'index_finger'
     elif index == 'M':
+        tmp_img = transform_img(cv2.imread("../assets/pics/gc_middle.png"))
+        glove_image.configure(image=tmp_img)
+        glove_image.image = tmp_img
+        main_window.update()
         return 'middle_finger'
     elif index == 'R':
+        tmp_img = transform_img(cv2.imread("../assets/pics/gc_ring.png"))
+        glove_image.configure(image=tmp_img)
+        glove_image.image = tmp_img
+        main_window.update()
         return 'ring_finger'
     elif index == 'B':
-        return 'baby_finger'
+        tmp_img = transform_img(cv2.imread("../assets/pics/gc_baby.png"))
+        glove_image.configure(image=tmp_img)
+        glove_image.image = tmp_img
+        main_window.update()
+        return None
     else:
         return None
 
@@ -70,10 +89,7 @@ def do_action(action, glove_controller):
 
 
 def kill_arduino_thread():
-    global window_is_alive
-    global arduino_thread
-    global main_window
-    global ser
+    global window_is_alive, arduino_thread, main_window, ser
 
     print("Exiting")
 
@@ -86,24 +102,40 @@ def kill_arduino_thread():
 
 
 def start_listening():
-    global window_is_alive, ser
+    global window_is_alive, ser, arduino_thread
     if current_option.get() != "Select port":
         port_selected = current_option.get().split("-")[0].strip()
-        ser = serial.Serial(port_selected)
-        glove_controller = GloveController()
-        while window_is_alive:
-            serial_data = (ser.read()).decode('utf-8')
-            if len(serial_data) > 0:
-                print("Doing action")
-                do_action(serial_data, glove_controller)
-        ser.close()
-        print("Good bye")
+        try:
+            ser = serial.Serial(port_selected)
+            messagebox.showinfo(title="Connected", message="¡Connected successfully!")
+            btn_text_var.set("Stop listening")
+            glove_controller = GloveController()
+            while window_is_alive:
+                serial_data = (ser.read()).decode('utf-8')
+                if len(serial_data) > 0:
+                    print("Doing action")
+                    do_action(serial_data, glove_controller)
+            #ser.close()
+            print("Good bye")
+        except Exception as e:
+            print(e)
+            messagebox.showerror(title="Error", message="Error. Port is Busy")
+            btn_text_var.set("Start listening")
 
 
 def init_thread():
-    global arduino_thread
-    arduino_thread = threading.Thread(target=start_listening)
-    arduino_thread.start()
+    global arduino_thread, ser, window_is_alive
+    if arduino_thread is None:
+        arduino_thread = threading.Thread(target=start_listening)
+        arduino_thread.start()
+    else:
+        if ser is not None:
+            window_is_alive = False
+            ser.close()
+            btn_text_var.set("Start listening")
+
+        arduino_thread.join()
+        arduino_thread = None
 
 
 def get_ports():
@@ -129,7 +161,7 @@ def display_ports():
 
 
 def main():
-    global arduino_thread, window_is_alive, glove_image
+    global arduino_thread, window_is_alive, glove_image, btn_text_var
 
     # Window settup
     window_title = "Glove Controller"
@@ -146,7 +178,7 @@ def main():
     current_option.set("Select port")
 
     # Button start listening
-    btn_text_var = tk.StringVar(value="Listen")
+    btn_text_var = tk.StringVar(value="Start listening")
     btn_start_listening = tk.Button(master=main_window, textvariable=btn_text_var,
                                     command=init_thread, font=('Open Sans', 16))
     btn_start_listening.config(bg="#F1FAEE")
@@ -154,7 +186,8 @@ def main():
 
     # Initial glove image
     tmp_img = transform_img(cv2.imread("../assets/pics/gc.png"))
-    glove_image = tk.Label(main_window, image=tmp_img, bg="#F1FAEE")
+    glove_image = tk.Label(main_window, bg="#F1FAEE")
+    glove_image.configure(image=tmp_img)
 
     glove_image.place(x=150, y=300)
 
